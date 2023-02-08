@@ -1,0 +1,20 @@
+{
+    "jupyter.kernels.filter": [
+        {
+            "path": "c:\\Users\\Percy\\anaconda3\\python.exe",
+            "type": "pythonEnvironment"
+        },
+        {
+            "path": "c:\\Users\\Percy\\miniconda3\\python.exe",
+            "type": "pythonEnvironment"
+        },
+        {
+            "path": "c:\\Users\\Percy\\AppData\\Local\\Programs\\Python\\Python310\\python.exe",
+            "type": "pythonEnvironment"
+        },
+        {
+            "path": "c:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\Python39_64\\python.exe",
+            "type": "pythonEnvironment"
+        }
+    ]
+}

@@ -14,20 +14,21 @@ from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 from torchvision.utils import save_image
+from datasets import load_dataset
 
 matplotlib.style.use('ggplot')
 
 # learning parameters
-batch_size = 64 # batch size, reduce if facing OOM error
+batch_size = 2 # batch size, reduce if facing OOM error
 epochs = 200 # number of epochs to train the SRCNN model for
 lr = 0.001 # the learning rate
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # input image dimensions
-img_rows, img_cols = 33, 33
-out_rws, out_cols = 33, 33
+img_rows, img_cols = 32, 32
+out_rws, out_cols = 32, 32
 
-file = h5py.File('input/train_mscale.h5')
+file = h5py.File('pyTorch/input/train_mscale.h5')
 # `in_train` has shape (21884, 33, 33, 1) which corresponds to
 # 21884 image patches of 33 pixels height & width and 1 color channel
 in_train = file['data'][:] # the training data
@@ -67,11 +68,57 @@ val_loader = DataLoader(val_data, batch_size=batch_size)
 
 # initialize the model
 print('Computation device: ', device)
-model = srcnn.SRCNN().to(device)
+# model = srcnn.SRCNN().to(device)
+# print(model)
+
+upscale_factor = 4
+resblock_layers = 10
+channels = 33
+kernel = 3
+
+model = edsr.EDSR(upscale_factor,resblock_layers, channels, kernel).to(device)
 print(model)
 
-edsr = edsr.EDSR().to(device)
-print(edsr)
+# criterion = nn.L1Loss()
+# optimizer = optim.Adam(model.parameters(), lr=0.0001, betas=(0.9, 0.999))
+
+epochs = 100
+print_every = 25
+train_loss = 0
+batch_num = 0
+
+# for epoch_num in range(epochs):
+#     for x_train, y_train in train_loader:
+#         image_data = x_train.to(device)
+#         label = y_train.to(device)
+
+#         optimizer.zero_grad()
+#         pred = model(image_data)
+#         print(pred.shape, label.shape)
+#         batch_num += 1
+#         loss = criterion(pred, label)
+#         loss.backward()
+#         optimizer.step()
+#         train_loss += loss.item()
+
+#         if batch_num % print_every == 0:
+#             print('Training Loss: {:.4f}'.format(train_loss / print_every))
+
+#     with torch.no_grad():
+#         val_loss = 0
+#         model.eval()
+#         for x_val, y_val in val_loader:
+#             image_data = x_val.to(device)
+#             label = y_val.to(device)
+#             test_pred = model(image_data)
+#             vloss = criterion(test_pred, label)
+#             val_loss += vloss.item()
+
+#         print('Epoch : {}/{}'.format(epoch_num, epochs))
+#         print('Training Loss : {:.4f}'.format(train_loss / print_every))
+#         print('Validation Loss: {:.4f}'.format(val_loss / len(val_loader)))
+#         train_loss = 0
+#         model.train()
 
 # optimizer
 optimizer = optim.Adam(model.parameters(), lr=lr)
@@ -142,40 +189,40 @@ def validate(model, dataloader, epoch):
     final_psnr = running_psnr/int(len(val_data)/dataloader.batch_size)
     return final_loss, final_psnr
 
-# train_loss, val_loss = [], []
-# train_psnr, val_psnr = [], []
-# start = time.time()
-# for epoch in range(epochs):
-#     print(f"Epoch {epoch + 1} of {epochs}")
-#     train_epoch_loss, train_epoch_psnr = train(model, train_loader)
-#     val_epoch_loss, val_epoch_psnr = validate(model, val_loader, epoch)
-#     print(f"Train PSNR: {train_epoch_psnr:.3f}")
-#     print(f"Val PSNR: {val_epoch_psnr:.3f}")
-#     train_loss.append(train_epoch_loss)
-#     train_psnr.append(train_epoch_psnr)
-#     val_loss.append(val_epoch_loss)
-#     val_psnr.append(val_epoch_psnr)
-# end = time.time()
-# print(f"Finished training in: {((end-start)/60):.3f} minutes")
+train_loss, val_loss = [], []
+train_psnr, val_psnr = [], []
+start = time.time()
+for epoch in range(epochs):
+    print(f"Epoch {epoch + 1} of {epochs}")
+    train_epoch_loss, train_epoch_psnr = train(model, train_loader)
+    val_epoch_loss, val_epoch_psnr = validate(model, val_loader, epoch)
+    print(f"Train PSNR: {train_epoch_psnr:.3f}")
+    print(f"Val PSNR: {val_epoch_psnr:.3f}")
+    train_loss.append(train_epoch_loss)
+    train_psnr.append(train_epoch_psnr)
+    val_loss.append(val_epoch_loss)
+    val_psnr.append(val_epoch_psnr)
+end = time.time()
+print(f"Finished training in: {((end-start)/60):.3f} minutes")
 
-# # loss plots
-# plt.figure(figsize=(10, 7))
-# plt.plot(train_loss, color='orange', label='train loss')
-# plt.plot(val_loss, color='red', label='validataion loss')
-# plt.xlabel('Epochs')
-# plt.ylabel('Loss')
-# plt.legend()
-# plt.savefig('outputs/loss.png')
-# plt.show()
-# # psnr plots
-# plt.figure(figsize=(10, 7))
-# plt.plot(train_psnr, color='green', label='train PSNR dB')
-# plt.plot(val_psnr, color='blue', label='validataion PSNR dB')
-# plt.xlabel('Epochs')
-# plt.ylabel('PSNR (dB)')
-# plt.legend()
-# plt.savefig('outputs/psnr.png')
-# plt.show()
-# # save the model to disk
-# print('Saving model...')
-# torch.save(model.state_dict(), 'outputs/model.pth')
+# loss plots
+plt.figure(figsize=(10, 7))
+plt.plot(train_loss, color='orange', label='train loss')
+plt.plot(val_loss, color='red', label='validataion loss')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.legend()
+plt.savefig('outputs/loss.png')
+plt.show()
+# psnr plots
+plt.figure(figsize=(10, 7))
+plt.plot(train_psnr, color='green', label='train PSNR dB')
+plt.plot(val_psnr, color='blue', label='validataion PSNR dB')
+plt.xlabel('Epochs')
+plt.ylabel('PSNR (dB)')
+plt.legend()
+plt.savefig('outputs/psnr.png')
+plt.show()
+# save the model to disk
+print('Saving model...')
+torch.save(model.state_dict(), 'outputs/model.pth')

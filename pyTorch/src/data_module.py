@@ -46,7 +46,7 @@ class DIV2K_x2(Dataset):
         img = Image.open(img_path)
         img = img.resize((int(self.im_size / self.scale), int(self.im_size / self.scale)))
         label = Image.open(label_path)
-        label = label.resize((int(self.im_size * self.scale), int(self.im_size * self.scale)))
+        label = label.resize((int(self.im_size), int(self.im_size)))
 
         if self.transform:
             img, label = self.transform(img, label)

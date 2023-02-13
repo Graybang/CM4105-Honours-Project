@@ -31,9 +31,9 @@ class upsampling(nn.Module):
 
         return output
 
-class EDSR(nn.Module):
+class edsr(nn.Module):
     def __init__(self, upscale_factor, layers ,channels ,kernel):
-        super(EDSR, self).__init__()
+        super(edsr, self).__init__()
 
         # First conv2d layer (input channels, output channels, kernel size)
         self.conv1 = nn.Conv2d(3, channels, kernel, padding=1)
@@ -45,7 +45,7 @@ class EDSR(nn.Module):
         self.conv2 = nn.Conv2d(channels, channels, kernel, padding=1)
 
         # Upsampling layers
-        self.upscale_block = self.upsample_layer(2, upscale_factor, channels, kernel)
+        self.upscale_block = self.upsample_layer(1, upscale_factor, channels, kernel)
 
         # Third conv2d layer
         self.conv3 = nn.Conv2d(channels, 3, kernel, padding=1)

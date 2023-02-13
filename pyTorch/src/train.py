@@ -17,173 +17,37 @@ from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 from torchvision.utils import save_image
 from datasets import load_dataset
+from data_module import DIV2K_x2, RandomHorizontalFlip, RandomVerticalFlip, Normalize, ToTensor, Compose
 
-matplotlib.style.use('ggplot')
+train_dir = 'C:/Users/Percy/Downloads/EDSR-pytorch-master (1)/EDSR-pytorch-master/data/train'
+val_dir = 'C:/Users/Percy/Downloads/EDSR-pytorch-master (1)/EDSR-pytorch-master/data/validation'
 
-AUTOTUNE = tf.data.AUTOTUNE
+train_transforms = Compose([RandomHorizontalFlip(p=0.5),
+                            RandomVerticalFlip(p=0.5),
+                            ToTensor(),
+                            Normalize([0.449, 0.438, 0.404],
+                                      [1.0, 1.0, 1.0])])
 
-# learning parameters
-batch_size = 2 # batch size, reduce if facing OOM error
-epochs = 200 # number of epochs to train the SRCNN model for
-lr = 0.001 # the learning rate
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+valid_transforms = Compose([RandomHorizontalFlip(p=0.5),
+                            RandomVerticalFlip(p=0.5),
+                            ToTensor(),
+                            Normalize([0.440, 0.435, 0.403],
+                                      [1.0, 1.0, 1.0])])
 
-# # input image dimensions
-# img_rows, img_cols = 33, 33
-# out_rws, out_cols = 132, 132
+trainset = DIV2K_x2(root_dir=train_dir, im_size=40, scale=2, transform=train_transforms)
+validset = DIV2K_x2(root_dir=val_dir, im_size=40, scale=2, transform=valid_transforms)
 
-file = h5py.File('pyTorch/input/train_mscale.h5')
-# `in_train` has shape (21884, 33, 33, 1) which corresponds to
-# 21884 image patches of 33 pixels height & width and 1 color channel
-in_train = file['data'][:] # the training data
-out_train = file['label'][:] # the training labels
-file.close()
-# change the values to float32
-in_train = in_train.astype('float32')
-out_train = out_train.astype('float32')
+trainloader = DataLoader(trainset, batch_size=4, shuffle=True)
+validloader = DataLoader(validset, batch_size=4, shuffle=True)
 
-# print(out_train)
-
-# (x_train, x_val, y_train, y_val) = train_test_split(in_train, out_train, test_size=0.25)
-# print('Training samples: ', x_train.shape[0])
-# print('Validation samples: ', x_val.shape[0])
-
-# Download DIV2K from TF Datasets
-# Using bicubic 4x degradation type
-div2k_data = tfds.image.Div2k(config="bicubic_x4")
-div2k_data.download_and_prepare()
-
-# Taking train data from div2k_data object
-train = div2k_data.as_dataset(split="train", as_supervised=True)
-train_cache = train.cache()
-# Validation data
-val = div2k_data.as_dataset(split="validation", as_supervised=True)
-val_cache = val.cache()
-
-print(train_cache)
-print(val_cache)
-
-# the dataset module
-class SRCNNDataset(Dataset):
-    def __init__(self, lowres_img, highres_img):
-        self.lowres_img = lowres_img
-        self.highres_img = highres_img
-
-    def __len__(self):
-        return (len(self.lowres_img))
-    
-    def __getitem__(self, index):
-        image = self.lowres_img[index]
-        label = self.highres_img[index]
-        return (
-            torch.tensor(image, dtype=torch.float),
-            torch.tensor(label, dtype=torch.float)
-        )
-    
-# train and validation data
-train_data = SRCNNDataset(train)
-val_data = SRCNNDataset(val)
-# train and validation loaders
-train_loader = DataLoader(train_data, batch_size=batch_size)
-val_loader = DataLoader(val_data, batch_size=batch_size)
-
-def flip_left_right(lowres_img, highres_img):
-    """Flips Images to left and right."""
-
-    # Outputs random values from a uniform distribution in between 0 to 1
-    rn = tf.random.uniform(shape=(), maxval=1)
-    # If rn is less than 0.5 it returns original lowres_img and highres_img
-    # If rn is greater than 0.5 it returns flipped image
-    return tf.cond(
-        rn < 0.5,
-        lambda: (lowres_img, highres_img),
-        lambda: (
-            tf.image.flip_left_right(lowres_img),
-            tf.image.flip_left_right(highres_img),
-        ),
-    )
-
-
-def random_rotate(lowres_img, highres_img):
-    """Rotates Images by 90 degrees."""
-
-    # Outputs random values from uniform distribution in between 0 to 4
-    rn = tf.random.uniform(shape=(), maxval=4, dtype=tf.int32)
-    # Here rn signifies number of times the image(s) are rotated by 90 degrees
-    return tf.image.rot90(lowres_img, rn), tf.image.rot90(highres_img, rn)
-
-
-def random_crop(lowres_img, highres_img, hr_crop_size=96, scale=4):
-    """Crop images.
-
-    low resolution images: 24x24
-    high resolution images: 96x96
-    """
-    lowres_crop_size = hr_crop_size // scale  # 96//4=24
-    lowres_img_shape = tf.shape(lowres_img)[:2]  # (height,width)
-
-    lowres_width = tf.random.uniform(
-        shape=(), maxval=lowres_img_shape[1] - lowres_crop_size + 1, dtype=tf.int32
-    )
-    lowres_height = tf.random.uniform(
-        shape=(), maxval=lowres_img_shape[0] - lowres_crop_size + 1, dtype=tf.int32
-    )
-
-    highres_width = lowres_width * scale
-    highres_height = lowres_height * scale
-
-    lowres_img_cropped = lowres_img[
-        lowres_height : lowres_height + lowres_crop_size,
-        lowres_width : lowres_width + lowres_crop_size,
-    ]  # 24x24
-    highres_img_cropped = highres_img[
-        highres_height : highres_height + hr_crop_size,
-        highres_width : highres_width + hr_crop_size,
-    ]  # 96x96
-
-    return lowres_img_cropped, highres_img_cropped
-
-def dataset_object(dataset_cache, training=True):
-
-    ds = dataset_cache
-    ds = ds.map(
-        lambda lowres, highres: random_crop(lowres, highres, scale=4),
-        num_parallel_calls=AUTOTUNE,
-    )
-
-    if training:
-        ds = ds.map(random_rotate, num_parallel_calls=AUTOTUNE)
-        ds = ds.map(flip_left_right, num_parallel_calls=AUTOTUNE)
-    # Batching Data
-    ds = ds.batch(16)
-
-    if training:
-        # Repeating Data, so that cardinality if dataset becomes infinte
-        ds = ds.repeat()
-    # prefetching allows later images to be prepared while the current image is being processed
-    ds = ds.prefetch(buffer_size=AUTOTUNE)
-    return ds
-
-
-train_ds = dataset_object(train_cache, training=True)
-val_ds = dataset_object(val_cache, training=False)
-
-def PSNR(super_resolution, high_resolution):
-    """Compute the peak signal-to-noise ratio, measures quality of image."""
-    # Max value of pixel is 255
-    psnr_value = tf.image.psnr(high_resolution, super_resolution, max_val=255)[0]
-    return psnr_value
-
-# initialize the model
-print('Computation device: ', device)
-# model = srcnn.SRCNN().to(device)
-# print(model)
-
-upscale_factor = 4
+upscale_factor = 2
 resblock_layers = 10
-channels = 96
+channels = 256
 kernel = 3
 
+# initialize the model
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print('Computation device: ', device)
 model = edsr.EDSR(upscale_factor,resblock_layers, channels, kernel).to(device)
 print(model)
 
@@ -196,13 +60,11 @@ train_loss = 0
 batch_num = 0
 
 for epoch_num in range(epochs):
-    for x_train, y_train in train_loader:
-        image_data = x_train.to(device)
-        label = y_train.to(device)
-
+    for img, label in trainloader:
+        img, label = img.cuda(), label.cuda()
         optimizer.zero_grad()
-        pred = model(image_data)
-        print(pred.shape, label.shape)
+        pred = model(img)
+        # print(pred.shape, label.shape)
         batch_num += 1
         loss = criterion(pred, label)
         loss.backward()
@@ -215,16 +77,15 @@ for epoch_num in range(epochs):
     with torch.no_grad():
         val_loss = 0
         model.eval()
-        for x_val, y_val in val_loader:
-            image_data = x_val.to(device)
-            label = y_val.to(device)
-            test_pred = model(image_data)
-            vloss = criterion(test_pred, label)
+        for val_ims, val_lbs in validloader:
+            val_ims, val_lbs = val_ims.cuda(), val_lbs.cuda()
+            test_pred = model(val_ims)
+            vloss = criterion(test_pred, val_lbs)
             val_loss += vloss.item()
 
         print('Epoch : {}/{}'.format(epoch_num, epochs))
         print('Training Loss : {:.4f}'.format(train_loss / print_every))
-        print('Validation Loss: {:.4f}'.format(val_loss / len(val_loader)))
+        print('Validation Loss: {:.4f}'.format(val_loss / len(validloader)))
         train_loss = 0
         model.train()
 

@@ -66,51 +66,6 @@ print('Computation device: ', device)
 model = edsr.edsr(upscale_factor,resblock_layers, channels, kernel).to(device)
 print(model)
 
-# criterion = nn.L1Loss()
-# optimizer = optim.Adam(model.parameters(), lr=0.0001, betas=(0.9, 0.999))
-
-# psnr = psnr.PSNR()
-
-# epochs = 10
-# print_every = 25
-# train_loss = 0
-# batch_num = 0
-
-# for epoch_num in range(epochs):
-#     for img, label in trainloader:
-#         img, label = img.cuda(), label.cuda()
-#         optimizer.zero_grad()
-#         pred = model(img)
-#         # print(pred.shape, label.shape)
-#         batch_num += 1
-#         loss = criterion(pred, label)
-#         loss.backward()
-#         optimizer.step()
-#         train_loss += loss.item()
-#         psnr_value = psnr(pred, label)
-#         # image1 = T.ToPILImage()(pred[0])
-#         # image2 = T.ToPILImage()(label[0])
-#         # image1.show()
-#         # image2.show()
-#         if batch_num % print_every == 0:
-#             print('Training Loss: {:.4f}'.format(train_loss / print_every))
-#             print('PSNR: {:.4f}'.format(psnr_value))
-
-#     with torch.no_grad():
-#         val_loss = 0
-#         model.eval()
-#         for val_ims, val_lbs in validloader:
-#             val_ims, val_lbs = val_ims.cuda(), val_lbs.cuda()
-#             test_pred = model(val_ims)
-#             vloss = criterion(test_pred, val_lbs)
-#             val_loss += vloss.item()
-
-#         print('Epoch : {}/{}'.format(epoch_num, epochs))
-#         print('Training Loss : {:.4f}'.format(train_loss / print_every))
-#         print('Validation Loss: {:.4f}'.format(val_loss / len(validloader)))
-#         train_loss = 0
-#         model.train()
-
 epochs = 100
 
 # optimizer

@@ -2,7 +2,7 @@ import torch
 import matplotlib.pyplot as plt
 import time
 import psnr
-import edsr_stereo
+import edsr_stereo_swin
 import torch.optim as optim
 import torch.nn as nn
 import numpy as np
@@ -15,8 +15,11 @@ from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 from torchvision.utils import save_image
-from datasets import load_dataset
+# from datasets import load_dataset
 from data_module_stereo import Flickr1024, RandomHorizontalFlip, RandomVerticalFlip, Normalize, ToTensor, Compose
+
+import os
+os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
 train_dir = 'C:/Users/Percy/Flickr1024/Train'
 test_dir = 'C:/Users/Percy/Flickr1024/Test'
@@ -27,16 +30,16 @@ transforms = Compose([RandomHorizontalFlip(p=0.5),
                             ToTensor(),
                             ])
 
-trainset = Flickr1024(root_dir=train_dir, im_size=100, scale=2, transform=transforms)
-validset = Flickr1024(root_dir=val_dir, im_size=100, scale=2, transform=transforms)
+upscale_factor = 2
+resblock_layers = 2
+channels = 96
+kernel = 3
+
+trainset = Flickr1024(root_dir=train_dir, im_size=128, scale=upscale_factor, transform=transforms)
+validset = Flickr1024(root_dir=val_dir, im_size=128, scale=upscale_factor, transform=transforms)
 
 trainloader = DataLoader(trainset, batch_size=8, shuffle=True)
 validloader = DataLoader(validset, batch_size=8, shuffle=True)
-
-upscale_factor = 2
-resblock_layers = 16
-channels = 256
-kernel = 3
 
 lowres_L, lowres_R, highres_L, highres_R = next(iter(trainloader))
 
@@ -56,7 +59,7 @@ for i in range(4):
 # initialize the model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print('Computation device: ', device)
-model = edsr_stereo.edsr(upscale_factor,resblock_layers, channels, kernel).to(device)
+model = edsr_stereo_swin.edsr(upscale_factor,resblock_layers, channels, kernel).to(device)
 print(model)
 
 epochs = 50

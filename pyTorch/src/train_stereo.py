@@ -35,11 +35,11 @@ resblock_layers = 2
 channels = 96
 kernel = 3
 
-trainset = Flickr1024(root_dir=train_dir, im_size=128, scale=upscale_factor, transform=transforms)
-validset = Flickr1024(root_dir=val_dir, im_size=128, scale=upscale_factor, transform=transforms)
+trainset = Flickr1024(root_dir=train_dir, im_size=224, scale=upscale_factor, transform=transforms)
+validset = Flickr1024(root_dir=val_dir, im_size=224, scale=upscale_factor, transform=transforms)
 
-trainloader = DataLoader(trainset, batch_size=8, shuffle=True)
-validloader = DataLoader(validset, batch_size=8, shuffle=True)
+trainloader = DataLoader(trainset, batch_size=4, shuffle=True)
+validloader = DataLoader(validset, batch_size=4, shuffle=True)
 
 lowres_L, lowres_R, highres_L, highres_R = next(iter(trainloader))
 
@@ -147,6 +147,11 @@ def validate(model, dataloader, epoch):
 train_loss, val_loss = [], []
 train_psnr, val_psnr = [], []
 start = time.time()
+
+pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+print(pytorch_total_params)
+
 for epoch in range(epochs):
     print(f"Epoch {epoch + 1} of {epochs}")
     train_epoch_loss, train_epoch_psnr = train(model, trainloader)

@@ -94,9 +94,12 @@ class resBlock(nn.Module):
         # print(input_L.shape)
         # print(input_size)
 
+        # NAFSSR SCAM
+        output_L, output_R = self.scam(input_L, input_R)
+
         # SWIN patching
-        output_L = self.patch(input_L)
-        output_R = self.patch(input_R)
+        output_L = self.patch(output_L)
+        output_R = self.patch(output_R)
 
         # This should repeat with swin integrated somehow
         output_L = self.swin(output_L, input_size)
@@ -108,9 +111,6 @@ class resBlock(nn.Module):
         # SWIN unpatching
         output_L = self.unpatch(output_L, input_size)
         output_R = self.unpatch(output_R, input_size)
-
-        # NAFSSR SCAM
-        output_L, output_R = self.scam(output_L, output_R)
 
         return output_L, output_R
 

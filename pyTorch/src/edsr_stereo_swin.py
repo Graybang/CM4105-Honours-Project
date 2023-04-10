@@ -159,19 +159,8 @@ class edsr(nn.Module):
         for _ in range(layers):
             upsample_blocks.append(upsampling(upscale_factor, channels, kernel))
         return nn.Sequential(*upsample_blocks)
-    
-    # SWINIR component
-    # def check_image_size(self, x):
-    #     _, _, h, w = x.size()
-    #     mod_pad_h = (self.window_size - h % self.window_size) % self.window_size
-    #     mod_pad_w = (self.window_size - w % self.window_size) % self.window_size
-    #     x = F.pad(x, (0, mod_pad_w, 0, mod_pad_h), 'reflect')
-    #     return x
 
     def forward(self, input_L, input_R):
-
-        # output_L = self.check_image_size(input_L)
-        # output_R = self.check_image_size(input_R)
 
         output_L = self.conv1(input_L)
         output_R = self.conv1(input_R)

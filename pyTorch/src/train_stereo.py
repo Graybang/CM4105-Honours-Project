@@ -10,6 +10,7 @@ import math
 import tensorflow_datasets as tfds
 import tensorflow as tf
 import torchvision.transforms as T
+import torchvision.datasets as datasets
 
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
@@ -21,9 +22,9 @@ from data_module_stereo import Flickr1024, RandomHorizontalFlip, RandomVerticalF
 import os
 os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
-train_dir = 'C:/Users/Percy/Flickr1024/Train'
-test_dir = 'C:/Users/Percy/Flickr1024/Test'
-val_dir = 'C:/Users/Percy/Flickr1024/Validation'
+train_dir = 'C:/Users/Percy/Flickr1024/Train_patched'
+test_dir = 'C:/Users/Percy/Flickr1024/Test_patched'
+val_dir = 'C:/Users/Percy/Flickr1024/Validation_patched'
 
 transforms = Compose([RandomHorizontalFlip(p=0.5),
                             RandomVerticalFlip(p=0.5),
@@ -31,15 +32,27 @@ transforms = Compose([RandomHorizontalFlip(p=0.5),
                             ])
 
 upscale_factor = 2
-resblock_layers = 2
+resblock_layers = 3
 channels = 96
 kernel = 3
 
-trainset = Flickr1024(root_dir=train_dir, im_size=224, scale=upscale_factor, transform=transforms)
-validset = Flickr1024(root_dir=val_dir, im_size=224, scale=upscale_factor, transform=transforms)
+trainset = Flickr1024(root_dir=train_dir, im_size=64, scale=upscale_factor, transform=transforms)
+validset = Flickr1024(root_dir=val_dir, im_size=64, scale=upscale_factor, transform=transforms)
 
-trainloader = DataLoader(trainset, batch_size=4, shuffle=True)
-validloader = DataLoader(validset, batch_size=4, shuffle=True)
+trainloader = DataLoader(trainset, batch_size=32, shuffle=True)
+validloader = DataLoader(validset, batch_size=32, shuffle=True)
+
+transform = T.Compose([
+    T.ToTensor(),
+])
+
+# train_dataset = datasets.ImageFolder(root=train_dir, transform=transform)
+# test_dataset = datasets.ImageFolder(root=test_dir, transform=transform)
+# val_dataset = datasets.ImageFolder(root=val_dir, transform=transform)
+
+# train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=32, shuffle=True)
+# test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=32, shuffle=False)
+# val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=32, shuffle=False)
 
 lowres_L, lowres_R, highres_L, highres_R = next(iter(trainloader))
 
@@ -62,7 +75,7 @@ print('Computation device: ', device)
 model = edsr_stereo_swin.edsr(upscale_factor,resblock_layers, channels, kernel).to(device)
 print(model)
 
-epochs = 50
+epochs = 10
 
 # optimizer
 optimizer = optim.Adam(model.parameters(), lr=0.0001, betas=(0.9, 0.999))

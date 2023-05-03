@@ -9,17 +9,17 @@ from torchvision.utils import save_image
     
 # load the super-resolution model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = edsr_stereo_swin.edsr(2,3, 96, 3).to(device)
-state_dict = torch.load("pyTorch/src/outputs_stereo/model.pth")
+model = edsr_stereo_swin.edsr(2,4, 96, 3).to(device)
+state_dict = torch.load("pyTorch/src/outputs_stereo/model10.pth")
 model.load_state_dict(state_dict)
 # set the tile size and overlap
 tile_size = 32
-overlap = 16
+overlap = 0
 
 # load the original stereo images
-input_image_left = Image.open("C:/Users/Percy/Flickr1024/Test/0035_L_50.png")
-psnr_input_image_left = Image.open("C:/Users/Percy/Flickr1024/Test/0035_L.png")
-input_image_right = Image.open("C:/Users/Percy/Flickr1024/Test/0035_R_50.png")
+input_image_left = Image.open("0035_L_50.png")
+# psnr_input_image_left = Image.open("0035_L.png")
+input_image_right = Image.open("0035_R_50.png")
 
 # make sure both images have the same size
 w, h = input_image_left.size

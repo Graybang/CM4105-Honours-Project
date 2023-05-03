@@ -32,15 +32,15 @@ transforms = Compose([RandomHorizontalFlip(p=0.5),
                             ])
 
 upscale_factor = 2
-resblock_layers = 3
+resblock_layers = 4
 channels = 96
 kernel = 3
 
 trainset = Flickr1024(root_dir=train_dir, im_size=64, scale=upscale_factor, transform=transforms)
 validset = Flickr1024(root_dir=val_dir, im_size=64, scale=upscale_factor, transform=transforms)
 
-trainloader = DataLoader(trainset, batch_size=32, shuffle=True)
-validloader = DataLoader(validset, batch_size=32, shuffle=True)
+trainloader = DataLoader(trainset, batch_size=24, shuffle=True)
+validloader = DataLoader(validset, batch_size=24, shuffle=True)
 
 transform = T.Compose([
     T.ToTensor(),
@@ -75,7 +75,7 @@ print('Computation device: ', device)
 model = edsr_stereo_swin.edsr(upscale_factor,resblock_layers, channels, kernel).to(device)
 print(model)
 
-epochs = 10
+epochs = 20
 
 # optimizer
 optimizer = optim.Adam(model.parameters(), lr=0.0001, betas=(0.9, 0.999))
@@ -175,6 +175,9 @@ for epoch in range(epochs):
     train_psnr.append(train_epoch_psnr)
     val_loss.append(val_epoch_loss)
     val_psnr.append(val_epoch_psnr)
+    if (epoch+1)%5 == 0:
+        print('Saving model...')
+        torch.save(model.state_dict(), f'C:/Users/Percy/OneDrive - Robert Gordon University/CM4105-Honours/CM4105-Honours-Project/pyTorch/src/outputs_stereo/model{epoch+1}.pth')
 end = time.time()
 print(f"Finished training in: {((end-start)/60):.3f} minutes")
 
@@ -199,3 +202,9 @@ plt.show()
 # save the model to disk
 print('Saving model...')
 torch.save(model.state_dict(), 'C:/Users/Percy/OneDrive - Robert Gordon University/CM4105-Honours/CM4105-Honours-Project/pyTorch/src/outputs_stereo/model.pth')
+print("LOSS")
+print(train_loss)
+print(val_loss)
+print("PSNR")
+print(train_psnr)
+print(val_psnr)

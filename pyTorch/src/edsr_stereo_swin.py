@@ -112,6 +112,13 @@ class resBlock(nn.Module):
         output_L = self.unpatch(output_L, input_size)
         output_R = self.unpatch(output_R, input_size)
 
+        # Skip connection
+        output_L = torch.mul(output_L, 0.1)
+        output_R = torch.mul(output_R, 0.1)
+
+        output_L = torch.add(output_L, input_L)
+        output_R = torch.add(output_R, input_R)
+
         return output_L, output_R
 
 class upsampling(nn.Module):
@@ -168,6 +175,9 @@ class edsr(nn.Module):
         output = (output_L, output_R)
 
         output_L, output_R = self.res_block(output)
+
+        output_L += output[0]
+        output_R += output[1]
 
         output_L = self.conv2(output_L)
         output_R = self.conv2(output_R)
